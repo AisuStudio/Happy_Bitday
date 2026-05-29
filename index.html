@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>THOMAS WIRD 77</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: #000;
+    color: #00ff00;
+    font-family: 'Courier New', Courier, monospace;
+    text-shadow: 0 0 8px #00ff00;
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1000;
+    background: repeating-linear-gradient(
+      0deg,
+      rgba(0, 255, 0, 0.04) 0px,
+      rgba(0, 255, 0, 0.04) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+  }
+
+  .bg-cables {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    opacity: 0.15;
+    pointer-events: none;
+    font-size: 14px;
+    line-height: 1;
+    white-space: pre;
+    overflow: hidden;
+    color: #00ff00;
+  }
+
+  .hud {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    z-index: 100;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    font-size: 12px;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 5px 10px;
+    border: 1px solid rgba(0, 255, 0, 0.4);
+  }
+  .hud .stat {
+    padding: 3px 8px;
+    border: 1px solid rgba(0, 255, 0, 0.4);
+    letter-spacing: 1px;
+  }
+  .hud .stat.on  { color: #00ff00; border-color: #00ff00; }
+  .hud .stat.off { color: rgba(0, 255, 0, 0.4); }
+  .hud button {
+    background: transparent;
+    border: 1px solid #00ff00;
+    color: #00ff00;
+    padding: 3px 8px;
+    cursor: pointer;
+    font-family: inherit;
+    text-shadow: inherit;
+    font-size: 12px;
+  }
+  .hud button:hover { background: rgba(0, 255, 0, 0.12); }
+
+  /* Maze section — fullscreen */
+  .maze-section {
+    min-height: 100vh;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px 10px 20px;
+    position: relative;
+  }
+  .help {
+    font-size: 12px;
+    opacity: 0.7;
+    letter-spacing: 2px;
+    margin-bottom: 14px;
+    text-align: center;
+    max-width: 700px;
+  }
+  .maze-container {
+    position: relative;
+    display: inline-block;
+    padding: 12px;
+    border: 1px solid rgba(0, 255, 0, 0.45);
+    background: rgba(0, 0, 0, 0.7);
+    box-shadow: 0 0 40px rgba(0, 255, 0, 0.15) inset;
+    outline: none;
+  }
+  .maze-container:focus {
+    border-color: #00ff00;
+    box-shadow: 0 0 50px rgba(0, 255, 0, 0.3) inset;
+  }
+  .maze {
+    font-family: 'Courier New', Courier, monospace;
+    line-height: 1.0;
+    white-space: pre;
+    letter-spacing: 0;
+    color: #00ff00;
+    margin: 0;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .bike-overlay {
+    position: absolute;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    filter: drop-shadow(0 0 8px #00ff00);
+    z-index: 5;
+    transition: left 0.06s linear, top 0.06s linear;
+    line-height: 1;
+    overflow: visible;
+  }
+
+  /* Pulsing collectibles */
+  .station-overlay {
+    position: absolute;
+    margin: 0;
+    font-family: inherit;
+    line-height: 1.0;
+    white-space: pre;
+    color: #00ff00;
+    pointer-events: none;
+    z-index: 3;
+    animation: collectible-pulse 1.8s ease-in-out infinite;
+  }
+  @keyframes collectible-pulse {
+    0%, 100% { opacity: 0.4; text-shadow: 0 0 3px #00ff00; }
+    50%      { opacity: 1;   text-shadow: 0 0 14px #00ff00, 0 0 22px #00ff00; }
+  }
+
+  /* Blinking cables */
+  .cable-overlay {
+    position: absolute;
+    margin: 0;
+    font-family: inherit;
+    line-height: 1.0;
+    white-space: pre;
+    color: #00ff00;
+    pointer-events: none;
+    z-index: 4;
+    animation: cable-blink 0.7s steps(1) infinite;
+  }
+  @keyframes cable-blink {
+    0%, 49%   { opacity: 1;    text-shadow: 0 0 14px #00ff00, 0 0 24px #00ff00; }
+    50%, 100% { opacity: 0.2;  text-shadow: 0 0 2px #00ff00; }
+  }
+
+  /* Intro / instructions overlay */
+  .intro-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.88);
+    padding: 20px;
+  }
+  .intro-box {
+    border: 3px double #00ff00;
+    background: rgba(0, 8, 0, 0.95);
+    box-shadow: 0 0 50px rgba(0, 255, 0, 0.3), 0 0 40px rgba(0, 255, 0, 0.15) inset;
+    padding: 28px 36px 32px;
+    text-align: center;
+    max-width: min(560px, 92vw);
+  }
+  .intro-title {
+    font-size: 22px;
+    letter-spacing: 3px;
+    margin-bottom: 24px;
+  }
+  .intro-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 22px;
+    margin: 18px 0;
+    flex-wrap: wrap;
+  }
+  .intro-text {
+    font-size: 18px;
+    letter-spacing: 1px;
+  }
+  .intro-demo {
+    margin: 0;
+    font-family: inherit;
+    white-space: pre;
+    line-height: 1.0;
+    color: #00ff00;
+  }
+  .demo-collect { font-size: 15px; animation: collectible-pulse 1.8s ease-in-out infinite; }
+  .demo-cable   { font-size: 24px; animation: cable-blink 0.7s steps(1) infinite; }
+  .intro-controls {
+    font-size: 14px;
+    opacity: 0.75;
+    margin: 22px 0 26px;
+    letter-spacing: 1px;
+  }
+  .intro-start {
+    background: transparent;
+    border: 2px solid #00ff00;
+    color: #00ff00;
+    font-family: inherit;
+    font-size: 18px;
+    letter-spacing: 4px;
+    padding: 10px 30px;
+    cursor: pointer;
+    text-shadow: 0 0 8px #00ff00;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  .intro-start:hover { background: rgba(0, 255, 0, 0.15); }
+
+  .game-status {
+    margin-top: 12px;
+    font-size: 14px;
+    letter-spacing: 2px;
+    min-height: 24px;
+    text-align: center;
+  }
+  .game-status .toast { animation: toast 1.8s forwards; }
+  @keyframes toast {
+    0%   { opacity: 0; transform: translateY(-6px); }
+    15%  { opacity: 1; transform: translateY(0); }
+    80%  { opacity: 1; }
+    100% { opacity: 0; transform: translateY(-6px); }
+  }
+
+  .touch-controls {
+    display: none;
+    grid-template-columns: 50px 50px 50px;
+    grid-template-rows: 50px 50px;
+    gap: 5px;
+    margin-top: 14px;
+  }
+  .touch-controls button {
+    background: rgba(0, 255, 0, 0.06);
+    border: 1px solid #00ff00;
+    color: #00ff00;
+    font-size: 22px;
+    cursor: pointer;
+    text-shadow: 0 0 6px #00ff00;
+    font-family: inherit;
+    user-select: none;
+  }
+  .touch-controls .spacer { background: transparent; border: none; }
+
+  /* Footer — sits directly under the maze, no scrolling */
+  .footer {
+    text-align: center;
+    margin-top: 22px;
+    max-width: 760px;
+  }
+  @keyframes pulse {
+    0%, 100% { text-shadow: 0 0 8px #00ff00; }
+    50%      { text-shadow: 0 0 24px #00ff00, 0 0 44px #00ff00; }
+  }
+  .footer .headline {
+    font-size: 18px;
+    letter-spacing: 3px;
+  }
+  .footer .cursor::after {
+    content: '_';
+    margin-left: 2px;
+    animation: blink 1s steps(2) infinite;
+  }
+  @keyframes blink {
+    0%, 50%      { opacity: 1; }
+    50.01%, 100% { opacity: 0; }
+  }
+  .footer .journey {
+    margin-top: 12px;
+    font-size: 12px;
+    opacity: 0.7;
+    letter-spacing: 1px;
+    line-height: 1.6;
+  }
+  .footer .signature {
+    margin-top: 12px;
+    font-size: 12px;
+    opacity: 0.55;
+  }
+  /* Victory glow once the maze is solved */
+  .maze.victory {
+    animation: victory-glow 1.1s ease-in-out infinite;
+  }
+  @keyframes victory-glow {
+    0%, 100% { text-shadow: 0 0 8px #00ff00; }
+    50%      { text-shadow: 0 0 22px #00ff00, 0 0 40px #00ff00; }
+  }
+
+  /* Sparks */
+  .spark {
+    position: fixed;
+    color: #00ff00;
+    pointer-events: none;
+    z-index: 0;
+    animation: spark-flicker 1.6s infinite;
+  }
+  @keyframes spark-flicker {
+    0%, 100% { opacity: 0; }
+    50%      { opacity: 1; text-shadow: 0 0 14px #00ff00; }
+  }
+
+  @media (max-width: 900px) {
+    .touch-controls { display: grid; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-cables" id="bgCables" aria-hidden="true"></div>
+
+<div class="intro-overlay" id="introOverlay">
+  <div class="intro-box">
+    <div class="intro-title">&gt;&gt; OPA'S MAZE-RIDE &lt;&lt;</div>
+    <div class="intro-row">
+      <div class="intro-text">Sammle die Erinnerungen ein</div>
+<pre class="intro-demo demo-collect">┌───┐
+│ ▤ │
+╤═╤═╤</pre>
+    </div>
+    <div class="intro-row">
+      <div class="intro-text">Verbinde die Kabel</div>
+<pre class="intro-demo demo-cable">╗   ╔</pre>
+    </div>
+    <div class="intro-controls">Steuerung:  ← ↑ → ↓   /   W A S D</div>
+    <button class="intro-start" id="introStart">[ START ]</button>
+  </div>
+</div>
+
+<div class="hud">
+  <span class="stat" id="memBox">0/8</span>
+  <span class="stat off" id="cableBox">⚡ 0/2</span>
+  <span class="stat off" id="lightBox">DARK</span>
+  <button id="muteBtn">SOUND ON</button>
+</div>
+
+<section class="maze-section">
+  <div class="help">
+    Pfeiltasten oder WASD · sammle die Erinnerungen ein · finde die Kabel und bring Licht
+  </div>
+  <div class="maze-container" id="mazeContainer" tabindex="0">
+    <pre class="maze" id="maze"></pre>
+    <div class="bike-overlay" id="bikeOverlay">👴🏻</div>
+  </div>
+  <div class="game-status" id="gameStatus">&gt; klick ins Labyrinth und drück eine Pfeiltaste_</div>
+  <div class="touch-controls" id="touchControls">
+    <span class="spacer"></span><button data-dir="up">↑</button><span class="spacer"></span>
+    <button data-dir="left">←</button><button data-dir="down">↓</button><button data-dir="right">→</button>
+  </div>
+  <div class="footer">
+    <div class="headline">&gt; DANKE FÜR JEDES BIT, OPA<span class="cursor"></span></div>
+    <div class="journey">&gt; späne · lötzinn · sinus · bits · λ · platinen · baupläne · enkel · und immer das fahrrad</div>
+    <div class="signature">&gt; made with ♥ in #00ff00</div>
+  </div>
+</section>
+
+<script>
+(() => {
+  // ============ BACKGROUND CABLES ============
+  const bg = document.getElementById('bgCables');
+  const buildCables = () => {
+    const charW = 9, charH = 14;
+    const cols = Math.ceil(window.innerWidth  / charW);
+    const rows = Math.ceil(window.innerHeight / charH);
+    const hLines = new Set();
+    for (let i = 0; i < Math.max(3, rows / 6); i++) hLines.add(Math.floor(Math.random() * rows));
+    const vLines = new Set();
+    for (let i = 0; i < Math.max(3, cols / 8); i++) vLines.add(Math.floor(Math.random() * cols));
+    let out = '';
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (hLines.has(r) && vLines.has(c))   out += '╬';
+        else if (hLines.has(r))               out += '═';
+        else if (vLines.has(c))               out += '║';
+        else if (Math.random() < 0.006)       out += '⚡';
+        else if (Math.random() < 0.01)        out += '·';
+        else                                  out += ' ';
+      }
+      out += '\n';
+    }
+    bg.textContent = out;
+  };
+  buildCables();
+  let rT;
+  window.addEventListener('resize', () => { clearTimeout(rT); rT = setTimeout(buildCables, 200); });
+
+  for (let i = 0; i < 14; i++) {
+    const sp = document.createElement('div');
+    sp.className = 'spark';
+    sp.textContent = ['*', '✦', '⚡', '+'][i % 4];
+    sp.style.left = (Math.random() * 95) + 'vw';
+    sp.style.top  = (Math.random() * 95) + 'vh';
+    sp.style.fontSize = (10 + Math.random() * 12) + 'px';
+    sp.style.animationDelay = (Math.random() * 2) + 's';
+    document.body.appendChild(sp);
+  }
+
+  // ============ AUDIO ============
+  let audioCtx = null, muted = false;
+  const ensureCtx = () => {
+    if (!audioCtx) { const AC = window.AudioContext || window.webkitAudioContext; audioCtx = new AC(); }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+  };
+  const playNote = (freq, dur, type, vol) => {
+    if (!freq) return;
+    const ctx = ensureCtx();
+    const osc = ctx.createOscillator(), g = ctx.createGain();
+    osc.type = type; osc.frequency.value = freq;
+    const t = ctx.currentTime;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(vol, t + 0.005);
+    g.gain.setValueAtTime(vol, t + dur * 0.6);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    osc.connect(g).connect(ctx.destination);
+    osc.start(t); osc.stop(t + dur + 0.02);
+  };
+  const playBeep = () => {
+    if (muted) return;
+    const ctx = ensureCtx();
+    const osc = ctx.createOscillator(), g = ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.07);
+    g.gain.setValueAtTime(0.08, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.09);
+    osc.connect(g).connect(ctx.destination);
+    osc.start(); osc.stop(ctx.currentTime + 0.11);
+  };
+  const playZap = () => {
+    if (muted) return;
+    const ctx = ensureCtx();
+    const osc = ctx.createOscillator(), g = ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(800, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(120, ctx.currentTime + 0.25);
+    g.gain.setValueAtTime(0.18, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.3);
+    osc.connect(g).connect(ctx.destination);
+    osc.start(); osc.stop(ctx.currentTime + 0.32);
+    const bufSize = Math.floor(ctx.sampleRate * 0.18);
+    const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / bufSize);
+    const noise = ctx.createBufferSource();
+    noise.buffer = buf;
+    const ng = ctx.createGain();
+    ng.gain.setValueAtTime(0.12, ctx.currentTime);
+    ng.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.2);
+    noise.connect(ng).connect(ctx.destination);
+    noise.start();
+  };
+  const N = {
+    REST: 0,
+    E2: 82.41, F2: 87.31, G2: 98.00, A2: 110.00, B2: 123.47,
+    C3: 130.81, D3: 146.83, E3: 164.81, F3: 174.61, G3: 196.00, A3: 220.00, B3: 246.94,
+    C4: 261.63, D4: 293.66, E4: 329.63, F4: 349.23, G4: 392.00, A4: 440.00, B4: 493.88,
+    C5: 523.25, D5: 587.33, E5: 659.25, F5: 698.46, G5: 783.99, A5: 880.00
+  };
+  const TICK = 0.15; // driving rock tempo
+  // 16-bar rock loop in A-minor (i–VI–VII), each line = 8 eighth-notes
+  const MELODY = [
+    ['A4',1],['A4',1],['C5',1],['A4',1], ['D5',1],['C5',1],['A4',2],
+    ['A4',1],['A4',1],['C5',1],['A4',1], ['E5',2],['D5',2],
+    ['C5',1],['A4',1],['G4',1],['A4',1], ['C5',1],['E5',1],['D5',2],
+    ['A4',4],['REST',4],
+    ['F4',1],['A4',1],['C5',1],['F5',1], ['E5',2],['C5',2],
+    ['G4',1],['B4',1],['D5',1],['G5',1], ['F5',2],['D5',2],
+    ['E5',1],['E5',1],['G5',1],['E5',1], ['A5',2],['G5',2],
+    ['E5',1],['D5',1],['C5',1],['A4',1], ['A4',4],
+    ['A4',1],['C5',1],['A4',1],['C5',1], ['D5',1],['E5',1],['D5',2],
+    ['C5',1],['A4',1],['C5',1],['E5',1], ['G5',2],['E5',2],
+    ['F5',1],['E5',1],['D5',1],['C5',1], ['D5',1],['C5',1],['A4',2],
+    ['G4',2],['A4',2],['REST',4],
+    ['A4',1],['B4',1],['C5',1],['D5',1], ['E5',1],['F5',1],['G5',2],
+    ['A5',2],['G5',1],['E5',1], ['D5',2],['C5',2],
+    ['A4',1],['C5',1],['E5',1],['A5',1], ['G5',1],['E5',1],['C5',1],['A4',1],
+    ['A4',4],['REST',4]
+  ];
+  const BASS = [
+    ['A2',1],['A2',1],['A2',1],['A2',1], ['A2',1],['A2',1],['A2',2],
+    ['A2',1],['A2',1],['A2',1],['A2',1], ['A2',2],['A2',2],
+    ['A2',1],['A2',1],['A2',1],['A2',1], ['A2',1],['A2',1],['A2',2],
+    ['A2',4],['A2',4],
+    ['F2',1],['F2',1],['F2',1],['F2',1], ['F2',2],['F2',2],
+    ['G2',1],['G2',1],['G2',1],['G2',1], ['G2',2],['G2',2],
+    ['A2',1],['A2',1],['A2',1],['A2',1], ['A2',2],['A2',2],
+    ['A2',4],['A2',4],
+    ['A2',1],['A2',1],['A2',1],['A2',1], ['A2',1],['A2',1],['A2',2],
+    ['C3',1],['C3',1],['C3',1],['C3',1], ['C3',2],['C3',2],
+    ['F2',1],['F2',1],['F2',1],['F2',1], ['F2',1],['F2',1],['F2',2],
+    ['G2',4],['G2',4],
+    ['A2',1],['A2',1],['A2',1],['A2',1], ['A2',1],['A2',1],['A2',2],
+    ['F2',2],['F2',2], ['G2',2],['G2',2],
+    ['A2',1],['A2',1],['A2',1],['A2',1], ['A2',1],['A2',1],['A2',1],['A2',1],
+    ['A2',4],['A2',4]
+  ];
+  let melodyActive = false, timerM = null, timerB = null;
+  const stepTrack = (track, idx, type, vol, which) => {
+    if (!melodyActive || muted) return;
+    const [name, beats] = track[idx % track.length];
+    const dur = beats * TICK;
+    if (N[name]) playNote(N[name], dur * 0.95, type, vol);
+    const id = setTimeout(() => stepTrack(track, idx + 1, type, vol, which), dur * 1000);
+    if (which === 'M') timerM = id; else timerB = id;
+  };
+  const startMelody = () => {
+    if (melodyActive || muted) return;
+    ensureCtx(); melodyActive = true;
+    stepTrack(MELODY, 0, 'sawtooth', 0.04,  'M');
+    stepTrack(BASS,   0, 'square',   0.05,  'B');
+  };
+  const stopMelody = () => {
+    melodyActive = false;
+    if (timerM) clearTimeout(timerM);
+    if (timerB) clearTimeout(timerB);
+  };
+  document.getElementById('muteBtn').addEventListener('click', (e) => {
+    muted = !muted;
+    e.target.textContent = muted ? 'SOUND OFF' : 'SOUND ON';
+    if (muted) stopMelody();
+    else { ensureCtx(); startMelody(); }
+  });
+  const unlockOnce = () => {
+    ensureCtx();
+    if (!muted) startMelody();
+    ['pointerdown','keydown','scroll'].forEach(ev =>
+      window.removeEventListener(ev, unlockOnce));
+  };
+  ['pointerdown','keydown'].forEach(ev => window.addEventListener(ev, unlockOnce));
+  window.addEventListener('scroll', unlockOnce, { passive: true });
+
+  // ============ MAZE BUILDER ============
+  // Letter shapes — 5 cols × 7 rows each
+  const LETTERS = {
+    T: ['█████','  █  ','  █  ','  █  ','  █  ','  █  ','  █  '],
+    H: ['█   █','█   █','█   █','█████','█   █','█   █','█   █'],
+    O: [' ███ ','█   █','█   █','█   █','█   █','█   █',' ███ '],
+    M: ['█   █','██ ██','█ █ █','█   █','█   █','█   █','█   █'],
+    A: [' ███ ','█   █','█   █','█████','█   █','█   █','█   █'],
+    S: [' ████','█    ','█    ',' ███ ','    █','    █','████ '],
+    W: ['█   █','█   █','█   █','█ █ █','█ █ █','██ ██','█   █'],
+    I: [' ███ ','  █  ','  █  ','  █  ','  █  ','  █  ',' ███ '],
+    R: ['████ ','█   █','█   █','████ ','█  █ ','█   █','█   █'],
+    D: ['████ ','█   █','█   █','█   █','█   █','█   █','████ '],
+    '7':['█████','   █ ','   █ ','  █  ','  █  ',' █   ',' █   '],
+    N: ['█   █','██  █','█ █ █','█ █ █','█  ██','█   █','█   █'],
+    E: ['█████','█    ','█    ','████ ','█    ','█    ','█████'],
+    X: ['█   █','█   █',' █ █ ','  █  ',' █ █ ','█   █','█   █'],
+    L: ['█    ','█    ','█    ','█    ','█    ','█    ','█████'],
+    V: ['█   █','█   █','█   █','█   █',' █ █ ',' █ █ ','  █  ']
+  };
+
+  const COLS = 78, ROWS = 21;
+  const TITLE_ROW = 7;
+  const grid = Array.from({length: ROWS}, () => Array(COLS).fill(' '));
+
+  // Outer walls
+  for (let x = 0; x < COLS; x++) { grid[0][x] = '█'; grid[ROWS-1][x] = '█'; }
+  for (let y = 0; y < ROWS; y++) { grid[y][0] = '█'; grid[y][COLS-1] = '█'; }
+
+  // Place title letters and remember "77" bounds
+  const TITLE = 'THOMAS WIRD 77';
+  let xCursor = 2;
+  const titleLetters = [];
+  for (let i = 0; i < TITLE.length; i++) {
+    const c = TITLE[i];
+    if (c === ' ') { xCursor += 3; continue; }
+    const letter = LETTERS[c];
+    titleLetters.push({ char: c, x: xCursor, y: TITLE_ROW });
+    for (let r = 0; r < 7; r++) {
+      for (let cc = 0; cc < 5; cc++) {
+        if (letter[r][cc] === '█') grid[TITLE_ROW + r][xCursor + cc] = '█';
+      }
+    }
+    xCursor += 5;
+    if (i + 1 < TITLE.length && TITLE[i + 1] !== ' ') xCursor += 1;
+  }
+
+  // Dark area = bounding box covering both "7"s
+  const sevens = titleLetters.filter(L => L.char === '7');
+  const darkX1 = Math.min(...sevens.map(s => s.x));
+  const darkX2 = Math.max(...sevens.map(s => s.x + 4));
+  const darkY1 = TITLE_ROW;
+  const darkY2 = TITLE_ROW + 6;
+  const darkCells = new Set();
+  const dKey = (x, y) => y * 1000 + x;
+  for (let y = darkY1; y <= darkY2; y++) {
+    for (let x = darkX1; x <= darkX2; x++) {
+      darkCells.add(dKey(x, y));
+    }
+  }
+
+  // Divider walls in top and bottom rooms — gaps at row 4 (top) and row 16 (bottom)
+  const topDividers = [19, 39, 58];
+  for (const xw of topDividers) {
+    for (let y = 1; y <= 6; y++) {
+      if (y !== 4) grid[y][xw] = '█';
+    }
+  }
+  const botDividers = [19, 39, 58];
+  for (const xw of botDividers) {
+    for (let y = 14; y <= 19; y++) {
+      if (y !== 16) grid[y][xw] = '█';
+    }
+  }
+
+  // ============ STATIONS (ASCII vignettes, no captions) ============
+  const stations = [
+    { name: 'Hobelbank',   x: 8,  y: 2, art: [
+      '┌───┐',
+      '│ ▤ │',
+      '╤═╤═╤'
+    ]},
+    { name: 'Oszilloskop', x: 27, y: 2, art: [
+      '┌───┐',
+      '│∿∿∿│',
+      '╘═o═╛'
+    ]},
+    { name: 'Widerstand',  x: 47, y: 3, art: [
+      '●─▓▓▓─●'
+    ]},
+    { name: 'Lötkolben',   x: 64, y: 2, art: [
+      '  )',
+      ' ╱═',
+      '╱██'
+    ]},
+    { name: 'Computer',    x: 6,  y: 15, art: [
+      '┌─────┐',
+      '│READY│',
+      '└══o══┘'
+    ]},
+    { name: 'IBM PC',      x: 26, y: 15, art: [
+      '┌─────┐',
+      '│ IBM │',
+      '╘═════╛'
+    ]},
+    { name: 'LISP / λ',    x: 47, y: 15, art: [
+      '  λ  ',
+      ' λ λ ',
+      'λ   λ'
+    ]},
+    { name: 'Bauplan',     x: 64, y: 15, art: [
+      '┌┬┬┬┐',
+      '├┼┼┼┤',
+      '└┴┴┴┘'
+    ]}
+  ];
+
+  // Stations are rendered as separate pulsing overlay elements (not painted
+  // into the maze grid) so each can glow independently. Underlying cells stay
+  // walkable; collection uses a bounding-box check.
+  const mazeBoxEl = document.getElementById('mazeContainer');
+  for (const s of stations) {
+    s.taken = false;
+    s.w = Math.max(...s.art.map(r => r.length));
+    s.h = s.art.length;
+    const el = document.createElement('pre');
+    el.className = 'station-overlay';
+    el.textContent = s.art.join('\n');
+    el.style.animationDelay = (Math.random() * 1.8).toFixed(2) + 's'; // stagger the pulse
+    mazeBoxEl.appendChild(el);
+    s.el = el;
+  }
+
+  // Cables — placed INSIDE the dark "77" area (always visible)
+  // Player must enter the dark to find them.
+  const cables = [
+    { x: darkX1,     y: 10, sym: '╗', taken: false },   // left edge of dark
+    { x: darkX2,     y: 10, sym: '╔', taken: false }    // right edge of dark
+  ];
+
+  // Make sure cable cells aren't on top of "7" walls — adjust if needed
+  cables.forEach(c => {
+    // if landed on a wall, walk down to find walkable cell
+    while (grid[c.y][c.x] === '█' && c.y < ROWS - 1) c.y++;
+  });
+  // Cables rendered as blinking overlay elements (always visible, even in dark)
+  for (const c of cables) {
+    const el = document.createElement('pre');
+    el.className = 'cable-overlay';
+    el.textContent = c.sym;
+    mazeBoxEl.appendChild(el);
+    c.el = el;
+  }
+
+  // Start and End
+  const start = { x: 1, y: 1 };
+  const goal  = { x: COLS - 2, y: ROWS - 2 };
+
+  // ============ GAME STATE ============
+  let player = { x: start.x, y: start.y };
+  let collected = 0;
+  const TOTAL = stations.length;
+  let cablesPicked = 0;
+  let lightsOn = false;
+  let won = false;
+  let nextLevelDone = false;
+  let gameStarted = false;
+
+  const isWall = (x, y) => {
+    if (x < 0 || x >= COLS || y < 0 || y >= ROWS) return true;
+    return grid[y][x] === '█';
+  };
+
+  // ============ RENDER ============
+  const mazePre   = document.getElementById('maze');
+  const bikeEl    = document.getElementById('bikeOverlay');
+  const mazeBox   = document.getElementById('mazeContainer');
+  const statusEl  = document.getElementById('gameStatus');
+  const memBox    = document.getElementById('memBox');
+  const cableBox  = document.getElementById('cableBox');
+  const lightBox  = document.getElementById('lightBox');
+
+  function render() {
+    let out = '';
+    const px = player.x, py = player.y;
+    for (let y = 0; y < ROWS; y++) {
+      let line = '';
+      for (let x = 0; x < COLS; x++) {
+        // Dark cell handling
+        if (!lightsOn && darkCells.has(dKey(x, y))) {
+          const d = Math.max(Math.abs(x - px), Math.abs(y - py));
+          if (d > 1) { line += ' '; continue; }
+        }
+
+        // Special: end goal marker
+        if (x === goal.x && y === goal.y && !won) { line += '★'; continue; }
+
+        line += grid[y][x];
+      }
+      out += line + '\n';
+    }
+    mazePre.textContent = out;
+    positionBikes();
+  }
+
+  // Measure char dims for overlay positioning
+  function getCharSize() {
+    const probe = document.createElement('span');
+    probe.style.cssText = 'visibility:hidden; position:absolute; font:inherit; white-space:pre;';
+    probe.textContent = 'X';
+    mazePre.appendChild(probe);
+    const r = probe.getBoundingClientRect();
+    probe.remove();
+    const fs = parseFloat(getComputedStyle(mazePre).fontSize);
+    return { w: r.width, h: fs * 1.0 };
+  }
+  function positionBikes() {
+    const cs = getCharSize();
+    const preRect = mazePre.getBoundingClientRect();
+    const boxRect = mazeBox.getBoundingClientRect();
+    const offX = preRect.left - boxRect.left;
+    const offY = preRect.top  - boxRect.top;
+    // Emojis render ~square; size to cell width and center over cell.
+    const size = cs.w * 1.6;
+    bikeEl.style.left = (offX + player.x * cs.w - (size - cs.w) / 2) + 'px';
+    bikeEl.style.top  = (offY + player.y * cs.h - (size - cs.h) / 2) + 'px';
+    bikeEl.style.width = size + 'px';
+    bikeEl.style.height = size + 'px';
+    bikeEl.style.fontSize = size + 'px';
+    // Station overlays
+    const fs = parseFloat(mazePre.style.fontSize) || 16;
+    for (const s of stations) {
+      if (!s.el) continue;
+      if (s.taken) { s.el.style.display = 'none'; continue; }
+      s.el.style.display = 'block';
+      s.el.style.left = (offX + s.x * cs.w) + 'px';
+      s.el.style.top  = (offY + s.y * cs.h) + 'px';
+      s.el.style.fontSize = fs + 'px';
+    }
+    // Cable overlays
+    for (const c of cables) {
+      if (!c.el) continue;
+      if (c.taken) { c.el.style.display = 'none'; continue; }
+      c.el.style.display = 'block';
+      c.el.style.left = (offX + c.x * cs.w) + 'px';
+      c.el.style.top  = (offY + c.y * cs.h) + 'px';
+      c.el.style.fontSize = fs + 'px';
+    }
+  }
+
+  // Paint a centered word made of block letters into the grid at startRow
+  function paintWord(word, startRow) {
+    let width = 0;
+    for (let i = 0; i < word.length; i++) {
+      if (word[i] === ' ') width += 3;
+      else { width += 5; if (i + 1 < word.length && word[i + 1] !== ' ') width += 1; }
+    }
+    let x = Math.max(1, Math.floor((COLS - width) / 2));
+    for (let i = 0; i < word.length; i++) {
+      const c = word[i];
+      if (c === ' ') { x += 3; continue; }
+      const letter = LETTERS[c];
+      if (!letter) { x += 6; continue; }
+      for (let r = 0; r < 7; r++)
+        for (let cc = 0; cc < 5; cc++)
+          if (letter[r][cc] === '█' && (startRow + r) < ROWS && (x + cc) < COLS)
+            grid[startRow + r][x + cc] = '█';
+      x += 5;
+      if (i + 1 < word.length && word[i + 1] !== ' ') x += 1;
+    }
+  }
+
+  // On full victory: replace the whole "THOMAS WIRD 77" title with "NEXT LEVEL"
+  function triggerNextLevel() {
+    if (nextLevelDone) return;
+    nextLevelDone = true;
+    for (let y = TITLE_ROW; y <= TITLE_ROW + 6; y++)
+      for (let x = 1; x < COLS - 1; x++)
+        grid[y][x] = ' ';
+    paintWord('NEXT LEVEL', TITLE_ROW);
+    mazePre.classList.add('victory');
+    render();
+    playZap();
+    flashScreen();
+    toast('&gt; NEXT LEVEL! 77 ✓');
+  }
+
+  // Fit font-size to viewport (fullscreen feel)
+  function fitMaze() {
+    const aroundW = 60;
+    // Reserve room for help text, status line, footer (and touch d-pad on mobile)
+    const aroundH = window.innerWidth <= 900 ? 430 : 320;
+    const availW = Math.max(300, window.innerWidth  - aroundW);
+    const availH = Math.max(220, window.innerHeight - aroundH);
+    const ratioW = 0.6;
+    const sizeByW = availW / (COLS * ratioW);
+    const sizeByH = availH / ROWS;
+    const size = Math.max(6, Math.min(22, Math.floor(Math.min(sizeByW, sizeByH))));
+    mazePre.style.fontSize = size + 'px';
+    render();
+  }
+  window.addEventListener('resize', fitMaze);
+
+  // ============ HUD ============
+  function setHUD() {
+    memBox.textContent   = `${collected}/${TOTAL}`;
+    cableBox.textContent = `⚡ ${cablesPicked}/2`;
+    cableBox.classList.toggle('off', cablesPicked === 0);
+    cableBox.classList.toggle('on',  cablesPicked > 0);
+    lightBox.textContent = lightsOn ? 'LIGHTS ON' : 'DARK';
+    lightBox.classList.toggle('off', !lightsOn);
+    lightBox.classList.toggle('on',  lightsOn);
+  }
+  function toast(msg) { statusEl.innerHTML = `<span class="toast">${msg}</span>`; }
+  function flashScreen() {
+    const f = document.createElement('div');
+    f.style.cssText = 'position:fixed; inset:0; background:#00ff00; opacity:0.5; z-index:998; pointer-events:none; transition:opacity 0.9s;';
+    document.body.appendChild(f);
+    requestAnimationFrame(() => { f.style.opacity = '0'; });
+    setTimeout(() => f.remove(), 1000);
+  }
+
+  // ============ MOVEMENT ============
+  function tryMove(dx, dy) {
+    if (!gameStarted || won) return;
+    const nx = player.x + dx, ny = player.y + dy;
+    if (isWall(nx, ny)) return;
+
+    player.x = nx; player.y = ny;
+
+    // Station pickup (bounding-box check)
+    for (const s of stations) {
+      if (s.taken) continue;
+      if (nx >= s.x && nx < s.x + s.w && ny >= s.y && ny < s.y + s.h) {
+        s.taken = true;
+        collected++;
+        if (s.el) s.el.style.display = 'none';
+        playBeep();
+        toast(`+ ${s.name.toUpperCase()}`);
+        break;
+      }
+    }
+
+    // Cable pickup
+    const cb = cables.find(c => c.x === nx && c.y === ny && !c.taken);
+    if (cb) {
+      cb.taken = true;
+      if (cb.el) cb.el.style.display = 'none';
+      cablesPicked++;
+      playBeep();
+      if (cablesPicked < 2) {
+        toast('CABLE ATTACHED — find the other end');
+      } else {
+        lightsOn = true;
+        playZap();
+        flashScreen();
+        toast('&gt; CIRCUIT CLOSED · 77 LEUCHTET');
+      }
+    }
+
+    // Reached goal
+    if (nx === goal.x && ny === goal.y) {
+      if (collected >= TOTAL && lightsOn) {
+        won = true;
+        triggerNextLevel();
+      } else {
+        const missing = [];
+        if (collected < TOTAL) missing.push(`${TOTAL - collected} Erinnerungen`);
+        if (!lightsOn) missing.push('Licht');
+        toast(`&gt; Ziel — noch offen: ${missing.join(' + ')}`);
+      }
+    }
+
+    setHUD();
+    render();
+  }
+
+  // Keyboard
+  const keyMap = {
+    ArrowUp:[0,-1], w:[0,-1], W:[0,-1],
+    ArrowDown:[0,1], s:[0,1], S:[0,1],
+    ArrowLeft:[-1,0], a:[-1,0], A:[-1,0],
+    ArrowRight:[1,0], d:[1,0], D:[1,0]
+  };
+  document.addEventListener('keydown', (e) => {
+    const m = keyMap[e.key];
+    if (!m) return;
+    if (won) return;
+    e.preventDefault();
+    tryMove(m[0], m[1]);
+  }, { capture: true });
+
+  // Intro overlay → START begins the game
+  const introOverlay = document.getElementById('introOverlay');
+  document.getElementById('introStart').addEventListener('click', () => {
+    introOverlay.style.display = 'none';
+    gameStarted = true;
+    ensureCtx();
+    if (!muted) startMelody();
+    mazeBox.focus();
+    statusEl.textContent = '> Sammle die Erinnerungen · verbinde die Kabel';
+  });
+
+  // Keep focus on the maze for keyboard control
+  mazeBox.addEventListener('click', () => mazeBox.focus());
+
+  document.querySelectorAll('.touch-controls button').forEach(btn => {
+    const dir = btn.dataset.dir;
+    const m = { up:[0,-1], down:[0,1], left:[-1,0], right:[1,0] }[dir];
+    const go = (e) => { e && e.preventDefault && e.preventDefault(); tryMove(m[0], m[1]); };
+    btn.addEventListener('click', go);
+    btn.addEventListener('touchstart', go, { passive: false });
+  });
+
+  // Init
+  fitMaze();
+  setHUD();
+  render();
+
+  setTimeout(() => {
+    if (collected === 0 && cablesPicked === 0) {
+      statusEl.textContent = '> Pfeiltasten / WASD · sammle die Erinnerungen · finde die Kabel';
+    }
+  }, 4000);
+})();
+</script>
+</body>
+</html>
